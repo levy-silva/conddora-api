@@ -1,1 +1,3 @@
-.lintagedrc
+.lintstagedrc
+.prettierrc
+eslint.config.mjs
