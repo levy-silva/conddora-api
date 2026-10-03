@@ -9,5 +9,5 @@ export const router = (app: Application): void => {
     }),
   );
 
-  app.use(express.json(), usersRouter, authRouter);
+  app.use(express.json(), authRouter, usersRouter);
 };
