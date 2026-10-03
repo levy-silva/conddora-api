@@ -1,4 +1,5 @@
 import express, { Application } from 'express';
+import usersRouter from './users.routes';
 
 export const router = (app: Application): void => {
   app.route('/').get((req, res) =>
@@ -7,5 +8,5 @@ export const router = (app: Application): void => {
     }),
   );
 
-  app.use(express.json());
+  app.use(express.json(), usersRouter);
 };
