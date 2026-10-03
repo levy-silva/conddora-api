@@ -1,3 +1,5 @@
 .lintstagedrc
 .prettierrc
 eslint.config.mjs
+docker-compose.yaml
+src/db/migrations
