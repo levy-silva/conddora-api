@@ -22,7 +22,7 @@ export class UserController {
           message: 'Email address is already in use',
         });
       }
-      const passwordHash = await hash(dto.name, 10);
+      const passwordHash = await hash(dto.password, 10);
 
       const [user] = await db
         .insert(usersTable)
