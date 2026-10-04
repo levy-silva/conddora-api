@@ -7,6 +7,7 @@ import {
 import { db } from '../../db';
 import { condominiosTable } from '../../db/schema';
 import { count, eq } from 'drizzle-orm';
+import { paginationSchema } from '../../@shared/schemas';
 
 export class CondominioController {
   async create(req: Request, res: Response, next: NextFunction) {
@@ -49,9 +50,14 @@ export class CondominioController {
   }
 
   async findAll(req: Request, res: Response, next: NextFunction) {
+    const { page, limit } = paginationSchema.parse(req.query);
+    const offset = (page - 1) * limit;
+
     try {
       const [condominios, [totalData]] = await Promise.all([
         db.query.condominiosTable.findMany({
+          limit,
+          offset,
           columns: {
             id: true,
             nomeFantasia: true,
@@ -62,10 +68,22 @@ export class CondominioController {
         db.select({ count: count() }).from(condominiosTable),
       ]);
 
+      const totalPages = Math.ceil(totalData.count / limit);
+
+      const nextPage = page < totalPages ? page + 1 : null;
+
+      const previousPage = page > 1 ? page - 1 : null;
+
       return res.status(201).json({
         status: 201,
         data: condominios,
-        total_data: totalData.count,
+        meta: {
+          totalItems: totalData.count,
+          currentPage: page,
+          totalPages,
+          previousPage,
+          nextPage,
+        },
       });
     } catch (error) {
       next(error);

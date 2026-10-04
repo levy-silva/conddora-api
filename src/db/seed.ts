@@ -64,40 +64,44 @@ const populate = async () => {
   const users = createUsers();
   const condominios = createCondominios();
 
-  // Hash the fixed admin password before starting the transaction.
-  const adminPasswordHash = hashSync('admin123', 10);
+  if ((await db.query.usersTable.findMany()).length < 1) {
+    // Hash the fixed admin password before starting the transaction.
+    const adminPasswordHash = hashSync('admin123', 10);
 
-  // Database operations only.
-  await db.transaction(async (tx) => {
-    await tx.insert(usersTable).values({
-      name: 'Admin',
-      email: 'admin@email.com',
-      passwordHash: adminPasswordHash,
+    // Database operations only.
+    await db.transaction(async (tx) => {
+      await tx.insert(usersTable).values({
+        name: 'Admin',
+        email: 'admin@email.com',
+        passwordHash: adminPasswordHash,
+      });
+
+      console.log('Admin user created successfully');
+
+      await tx
+        .insert(rolesTable)
+        .values([
+          { name: 'ADMIN' },
+          { name: 'CONDOMINO' },
+          { name: 'SINDICO' },
+          { name: 'FUNCIONARIO' },
+        ]);
+
+      console.log('Roles created successfully');
+
+      await tx.insert(usersTable).values(users);
+
+      console.log('Users created successfully');
+
+      await tx.insert(condominiosTable).values(condominios);
+
+      console.log('Condomínios created successfully');
     });
 
-    console.log('Admin user created successfully');
-
-    await tx
-      .insert(rolesTable)
-      .values([
-        { name: 'ADMIN' },
-        { name: 'CONDOMINO' },
-        { name: 'SINDICO' },
-        { name: 'FUNCIONARIO' },
-      ]);
-
-    console.log('Roles created successfully');
-
-    await tx.insert(usersTable).values(users);
-
-    console.log('Users created successfully');
-
-    await tx.insert(condominiosTable).values(condominios);
-
-    console.log('Condomínios created successfully');
-  });
-
-  console.log('Database populated successfully');
+    console.log('Database populated successfully');
+  } else {
+    return console.log('Database is already populated');
+  }
 };
 
 populate().catch((error) => {

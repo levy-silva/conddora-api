@@ -4,6 +4,7 @@ import { db } from '../../db';
 import { rolesTable } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import { count } from 'drizzle-orm';
+import { paginationSchema } from '../../@shared/schemas';
 
 export class RoleController {
   async create(req: Request, res: Response, next: NextFunction) {
@@ -36,9 +37,14 @@ export class RoleController {
   }
 
   async findAll(req: Request, res: Response, next: NextFunction) {
+    const { page, limit } = paginationSchema.parse(req.query);
+    const offset = (page - 1) * limit;
+
     try {
       const [roles, [totalData]] = await Promise.all([
         db.query.rolesTable.findMany({
+          limit,
+          offset,
           columns: {
             id: true,
             name: true,
@@ -48,10 +54,22 @@ export class RoleController {
         db.select({ count: count() }).from(rolesTable),
       ]);
 
+      const totalPages = Math.ceil(totalData.count / limit);
+
+      const nextPage = page < totalPages ? page + 1 : null;
+
+      const previousPage = page > 1 ? page - 1 : null;
+
       return res.status(200).json({
         status: 200,
         data: roles,
-        total_data: totalData.count,
+        meta: {
+          totalItems: totalData.count,
+          totalPages,
+          currentPage: page,
+          previousPage,
+          nextPage,
+        },
       });
     } catch (error) {
       next(error);

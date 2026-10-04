@@ -5,6 +5,7 @@ import { hash } from 'bcrypt';
 import { eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { count } from 'drizzle-orm';
+import { paginationSchema } from '../../@shared/schemas';
 
 export class UserController {
   async create(req: Request, res: Response, next: NextFunction) {
@@ -47,9 +48,14 @@ export class UserController {
   }
 
   async findAll(req: Request, res: Response, next: NextFunction) {
+    const { page, limit } = paginationSchema.parse(req.query);
+    const offset = (page - 1) * limit;
+
     try {
       const [users, [totalData]] = await Promise.all([
         db.query.usersTable.findMany({
+          limit,
+          offset,
           columns: {
             id: true,
             name: true,
@@ -59,10 +65,22 @@ export class UserController {
         db.select({ count: count() }).from(usersTable),
       ]);
 
+      const totalPages = Math.ceil(totalData.count / limit);
+
+      const nextPage = page < totalPages ? page + 1 : null;
+
+      const previousPage = page > 1 ? page - 1 : null;
+
       return res.status(200).json({
         status: 200,
         data: users,
-        total_data: totalData.count,
+        meta: {
+          totalItems: totalData.count,
+          totalPages,
+          currentPage: page,
+          previousPage,
+          nextPage,
+        },
       });
     } catch (error) {
       next(error);
