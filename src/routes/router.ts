@@ -1,6 +1,8 @@
 import express, { Application } from 'express';
-import usersRouter from './users.routes';
+
 import authRouter from './auth.routes';
+import usersRouter from './users.routes';
+import condominiosRouter from './condominios.routes';
 
 export const router = (app: Application): void => {
   app.route('/').get((req, res) =>
@@ -9,5 +11,5 @@ export const router = (app: Application): void => {
     }),
   );
 
-  app.use(express.json(), authRouter, usersRouter);
+  app.use(express.json(), authRouter, usersRouter, condominiosRouter);
 };

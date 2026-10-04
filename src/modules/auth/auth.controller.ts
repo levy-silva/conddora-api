@@ -45,7 +45,7 @@ export class AuthController {
 
       const accesstoken = sign(payload, process.env.JWT_SECRET!, {
         subject: existingUser.id,
-        expiresIn: '3m',
+        expiresIn: '30m',
       });
 
       return res.status(200).json({

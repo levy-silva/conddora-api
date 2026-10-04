@@ -1,0 +1,1 @@
+ALTER TABLE "condominios" ADD COLUMN "cidade" varchar(255) NOT NULL;
