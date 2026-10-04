@@ -4,7 +4,7 @@ import { Faker, en, pt_BR } from '@faker-js/faker';
 import { hashSync } from 'bcrypt';
 
 import { db } from '.';
-import { condominiosTable, usersTable } from './schema';
+import { condominiosTable, rolesTable, usersTable } from './schema';
 
 const f = new Faker({
   locale: [pt_BR, en],
@@ -76,6 +76,17 @@ const populate = async () => {
     });
 
     console.log('Admin user created successfully');
+
+    await tx
+      .insert(rolesTable)
+      .values([
+        { name: 'ADMIN' },
+        { name: 'CONDOMINO' },
+        { name: 'SINDICO' },
+        { name: 'FUNCIONARIO' },
+      ]);
+
+    console.log('Roles created successfully');
 
     await tx.insert(usersTable).values(users);
 

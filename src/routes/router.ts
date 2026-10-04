@@ -3,6 +3,7 @@ import express, { Application } from 'express';
 import authRouter from './auth.routes';
 import usersRouter from './users.routes';
 import condominiosRouter from './condominios.routes';
+import rolesRouter from './roles.routes';
 
 export const router = (app: Application): void => {
   app.route('/').get((req, res) =>
@@ -11,5 +12,11 @@ export const router = (app: Application): void => {
     }),
   );
 
-  app.use(express.json(), authRouter, usersRouter, condominiosRouter);
+  app.use(
+    express.json(),
+    authRouter,
+    usersRouter,
+    condominiosRouter,
+    rolesRouter,
+  );
 };
