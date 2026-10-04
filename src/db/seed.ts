@@ -1,148 +1,95 @@
 import 'dotenv/config';
 
-import { seed } from 'drizzle-seed';
-import * as schema from './schema';
+import { Faker, en, pt_BR } from '@faker-js/faker';
+import { hashSync } from 'bcrypt';
 
 import { db } from '.';
-import { hash } from 'bcrypt';
+import { condominiosTable, usersTable } from './schema';
 
-const ufs = [
-  'AC',
-  'AL',
-  'AP',
-  'AM',
-  'BA',
-  'CE',
-  'DF',
-  'ES',
-  'GO',
-  'MA',
-  'MT',
-  'MS',
-  'MG',
-  'PA',
-  'PB',
-  'PR',
-  'PE',
-  'PI',
-  'RJ',
-  'RN',
-  'RS',
-  'RO',
-  'RR',
-  'SC',
-  'SP',
-  'SE',
-  'TO',
-];
+const f = new Faker({
+  locale: [pt_BR, en],
+});
 
-const cidades = [
-  'Salvador',
-  'Feira de Santana',
-  'Lauro de Freitas',
-  'Camaçari',
-  'Vitória da Conquista',
-  'Ilhéus',
-  'Itabuna',
-];
+const createUsers = () => {
+  const users: {
+    name: string;
+    email: string;
+    passwordHash: string;
+  }[] = Array.from({ length: 30 }).map((_, i) => ({
+    name: f.person.fullName(),
+    email: f.internet.email().toLowerCase(),
+    passwordHash: hashSync(`0${i}`, 10),
+  }));
 
-const bairros = [
-  'Stella Maris',
-  'Pituba',
-  'Itaigara',
-  'Imbuí',
-  'Brotas',
-  'Barra',
-  'Ondina',
-  'Rio Vermelho',
-  'Caminho das Árvores',
-  'Costa Azul',
-];
+  return users;
+};
 
-const ceps = [
-  '40000000',
-  '40100000',
-  '40200000',
-  '40300000',
-  '40400000',
-  '40500000',
-  '40600000',
-  '40700000',
-  '40800000',
-  '40900000',
-];
+const createCondominios = () => {
+  const condominios: {
+    razaoSocial: string;
+    nomeFantasia: string;
+    cnpj: string;
+    logradouro: string;
+    bairro: string;
+    numero: string;
+    complemento: string | null;
+    cidade: string;
+    cep: string;
+    uf: string;
+  }[] = Array.from({ length: 30 }).map(() => ({
+    razaoSocial: f.company.name(),
+    nomeFantasia: f.company.name(),
+    cnpj: f.string.numeric(14),
+    logradouro: f.location.streetAddress(),
+    bairro: f.location.street(),
+    numero: f.string.numeric({ length: { min: 1, max: 4 } }),
+    complemento: f.helpers.arrayElement([
+      null,
+      'Bloco A',
+      'Bloco B',
+      'Torre 1',
+      'Torre 2',
+      'Casa 01',
+    ]),
+    cidade: f.location.city(),
+    cep: f.string.numeric(8),
+    uf: f.location.state({ abbreviated: true }),
+  }));
+
+  return condominios;
+};
 
 const populate = async () => {
-  await db.insert(schema.usersTable).values({
-    name: 'Admin',
-    email: 'admin@email.com',
-    passwordHash: await hash('admin123', 10),
+  // Generate everything first.
+  const users = createUsers();
+  const condominios = createCondominios();
+
+  // Hash the fixed admin password before starting the transaction.
+  const adminPasswordHash = hashSync('admin123', 10);
+
+  // Database operations only.
+  await db.transaction(async (tx) => {
+    await tx.insert(usersTable).values({
+      name: 'Admin',
+      email: 'admin@email.com',
+      passwordHash: adminPasswordHash,
+    });
+
+    console.log('Admin user created successfully');
+
+    await tx.insert(usersTable).values(users);
+
+    console.log('Users created successfully');
+
+    await tx.insert(condominiosTable).values(condominios);
+
+    console.log('Condomínios created successfully');
   });
-
-  console.log('Admin user created successfully');
-
-  await seed(db, schema).refine((f) => ({
-    usersTable: {
-      count: 30,
-      columns: {
-        id: f.uuid(),
-        name: f.fullName(),
-        email: f.email(),
-        password: f.string(),
-      },
-    },
-
-    condominiosTable: {
-      count: 30,
-      columns: {
-        id: f.uuid(),
-
-        razaoSocial: f.companyName(),
-
-        nomeFantasia: f.companyName(),
-
-        cnpj: f.string({
-          isUnique: true,
-        }),
-
-        logradouro: f.streetAddress(),
-
-        bairro: f.valuesFromArray({
-          values: bairros,
-        }),
-
-        numero: f.number({
-          minValue: 1,
-          maxValue: 9999,
-        }),
-
-        complemento: f.valuesFromArray({
-          values: [
-            'Bloco A',
-            'Bloco B',
-            'Torre 1',
-            'Torre 2',
-            'Casa 01',
-            'Casa 02',
-          ],
-        }),
-
-        cidade: f.valuesFromArray({
-          values: cidades,
-        }),
-
-        cep: f.valuesFromArray({
-          values: ceps,
-        }),
-
-        uf: f.valuesFromArray({
-          values: ufs,
-        }),
-      },
-    },
-  }));
 
   console.log('Database populated successfully');
 };
 
-populate();
+populate().catch((error) => {
+  console.error('Error populating database:', error);
+  process.exitCode = 1;
+});
