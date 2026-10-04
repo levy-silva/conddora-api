@@ -1,4 +1,5 @@
 import { pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 import { v7 as uuidV7 } from 'uuid';
 
 const id = {
@@ -17,11 +18,21 @@ const timestamps = {
     .$onUpdateFn(() => new Date()),
 };
 
+export const rolesTable = pgTable('roles', {
+  ...id,
+  name: varchar('name', { length: 50 }).notNull().unique(),
+  description: varchar('description', { length: 100 }),
+  ...timestamps,
+});
+
 export const usersTable = pgTable('users', {
   ...id,
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: varchar('password_hash', { length: 200 }).notNull(),
+
+  roleId: uuid('role_id').references(() => rolesTable.id),
+
   ...timestamps,
 });
 
@@ -39,3 +50,14 @@ export const condominiosTable = pgTable('condominios', {
   uf: varchar('uf', { length: 2 }).notNull(),
   ...timestamps,
 });
+
+export const usersRelations = relations(usersTable, ({ one }) => ({
+  role: one(rolesTable, {
+    fields: [usersTable.roleId],
+    references: [rolesTable.id],
+  }),
+}));
+
+export const rolesRelations = relations(rolesTable, ({ many }) => ({
+  users: many(usersTable),
+}));
