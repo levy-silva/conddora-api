@@ -20,5 +20,5 @@ export const errorHandler = (
   } else if (error instanceof BaseException) {
     return error.send(res);
   }
-  return new InternalServerException().send(res);
+  return new InternalServerException(error).send(res);
 };

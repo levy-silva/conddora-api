@@ -1,44 +1,32 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
+
+import { NotFoundException } from '../../errors/notfound.exception';
+import { CondominioService } from './condominios.service';
+import { paginationSchema } from '../../@shared/schemas';
+
 import {
   condominioIdParamsDTO,
   createCondominioDTO,
   updateCondominioDTO,
 } from './condominios.dtos';
-import { db } from '../../db';
-import { condominiosTable } from '../../db/schema';
-import { count, eq } from 'drizzle-orm';
-import { paginationSchema } from '../../@shared/schemas';
 
 export class CondominioController {
-  async create(req: Request, res: Response, next: NextFunction) {
+  constructor(private readonly condominioService: CondominioService) {}
+
+  create = async (req: Request, res: Response, next: NextFunction) => {
     const dto = createCondominioDTO.parse(req.body);
 
     try {
-      const existingCondominio = await db.query.condominiosTable.findFirst({
-        where: eq(condominiosTable.cnpj, dto.cnpj),
-        columns: { id: true },
+      const condominio = await this.condominioService.create({
+        razaoSocial: dto.razaoSocial,
+        nomeFantasia: dto.nomeFantasia,
+        cnpj: dto.cnpj,
+        logradouro: dto.logradouro,
+        bairro: dto.bairro,
+        cidade: dto.cidade,
+        cep: dto.cep,
+        uf: dto.uf,
       });
-
-      if (existingCondominio) {
-        return res.status(409).json({
-          status: 409,
-          message: 'CNPJ is already in use',
-        });
-      }
-
-      const [condominio] = await db
-        .insert(condominiosTable)
-        .values(dto)
-        .returning({
-          id: condominiosTable.id,
-          razaoSocial: condominiosTable.razaoSocial,
-          nomeFantasia: condominiosTable.nomeFantasia,
-          cnpj: condominiosTable.cnpj,
-          logradouro: condominiosTable.logradouro,
-          bairro: condominiosTable.bairro,
-          cidade: condominiosTable.cidade,
-          uf: condominiosTable.uf,
-        });
 
       return res.status(201).json({
         status: 201,
@@ -47,74 +35,40 @@ export class CondominioController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async findAll(req: Request, res: Response, next: NextFunction) {
+  findAll = async (req: Request, res: Response, next: NextFunction) => {
     const { page, limit } = paginationSchema.parse(req.query);
-    const offset = (page - 1) * limit;
 
     try {
-      const [condominios, [totalData]] = await Promise.all([
-        db.query.condominiosTable.findMany({
-          limit,
-          offset,
-          columns: {
-            id: true,
-            nomeFantasia: true,
-            cidade: true,
-            uf: true,
-          },
-        }),
-        db.select({ count: count() }).from(condominiosTable),
-      ]);
-
-      const totalPages = Math.ceil(totalData.count / limit);
-
-      const nextPage = page < totalPages ? page + 1 : null;
-
-      const previousPage = page > 1 ? page - 1 : null;
+      const data = await this.condominioService.findAll({ page, limit });
 
       return res.status(201).json({
         status: 201,
-        data: condominios,
+        data: data.condominios,
         meta: {
-          totalItems: totalData.count,
+          totalItems: data.count,
           currentPage: page,
-          totalPages,
-          previousPage,
-          nextPage,
+          totalPages: data.totalPages,
+          previousPage: data.previousPage,
+          nextPage: data.nextPage,
         },
       });
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async findById(req: Request, res: Response, next: NextFunction) {
+  findById = async (req: Request, res: Response, next: NextFunction) => {
     const { condominioId } = condominioIdParamsDTO.parse(req.params);
 
     try {
-      const condominio = await db.query.condominiosTable.findFirst({
-        where: eq(condominiosTable.id, condominioId),
-        columns: {
-          id: true,
-          nomeFantasia: true,
-          cnpj: true,
-          logradouro: true,
-          bairro: true,
-          numero: true,
-          complemento: true,
-          cidade: true,
-          cep: true,
-          uf: true,
-        },
+      const condominio = await this.condominioService.findById({
+        condominioId,
       });
 
       if (!condominio) {
-        return res.status(404).json({
-          status: 404,
-          message: 'Condomínio not found',
-        });
+        throw new NotFoundException('Condomínio not found');
       }
 
       return res.status(201).json({
@@ -124,26 +78,20 @@ export class CondominioController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async update(req: Request, res: Response, next: NextFunction) {
+  update = async (req: Request, res: Response, next: NextFunction) => {
     const { condominioId } = condominioIdParamsDTO.parse(req.params);
     const updateDTO = updateCondominioDTO.parse(req.body);
 
     try {
-      const [condominio] = await db
-        .update(condominiosTable)
-        .set(updateDTO)
-        .where(eq(condominiosTable.id, condominioId))
-        .returning({
-          id: condominiosTable.id,
-        });
+      const condominio = await this.condominioService.update(
+        condominioId,
+        updateDTO,
+      );
 
       if (!condominio) {
-        return res.status(404).json({
-          status: 404,
-          message: 'Condomínio not found',
-        });
+        throw new NotFoundException('Condomínio not found');
       }
 
       return res.status(200).json({
@@ -153,24 +101,16 @@ export class CondominioController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async delete(req: Request, res: Response, next: NextFunction) {
+  delete = async (req: Request, res: Response, next: NextFunction) => {
     const { condominioId } = condominioIdParamsDTO.parse(req.params);
 
     try {
-      const [condominio] = await db
-        .delete(condominiosTable)
-        .where(eq(condominiosTable.id, condominioId))
-        .returning({
-          id: condominiosTable.id,
-        });
+      const condominio = await this.condominioService.delete(condominioId);
 
       if (!condominio) {
-        return res.status(404).json({
-          status: 404,
-          message: 'Condomínio not found',
-        });
+        throw new NotFoundException('Condomínio not found');
       }
 
       return res.status(200).json({
@@ -180,5 +120,5 @@ export class CondominioController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 }

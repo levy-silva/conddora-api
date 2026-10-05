@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { CondominioController } from '../modules/condominios/condominios.controller';
+import { CondominioService } from '../modules/condominios/condominios.service';
 
-const condominioController = new CondominioController();
+const condominioService = new CondominioService();
+const condominioController = new CondominioController(condominioService);
 
 const condominiosRouter = Router();
 
