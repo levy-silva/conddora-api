@@ -10,7 +10,7 @@ export class BaseException extends Error {
 
   send(res: Response) {
     return res.status(this.status).json({
-      staus: this.status,
+      status: this.status,
       message: this.message,
     });
   }
