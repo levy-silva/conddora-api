@@ -5,4 +5,4 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().positive().default(10),
 });
 
-export type PaginationSchema = z.infer<typeof paginationSchema>;
+export type PaginationDTO = z.infer<typeof paginationSchema>;

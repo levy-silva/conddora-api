@@ -1,8 +1,11 @@
 import { Router } from 'express';
+
 import { UserController } from '../modules/users/users.controller';
+import { UserService } from '../modules/users/users.service';
 import { authenticate } from '../middlewares/autheticate';
 
-const userController = new UserController();
+const userService = new UserService();
+const userController = new UserController(userService);
 
 const usersRouter = Router();
 

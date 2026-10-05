@@ -1,42 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
+
 import { createUserDTO, updateUserDTO, userIdParamsDTO } from './users.dtos';
-import { usersTable } from '../../db/schema';
-import { hash } from 'bcrypt';
-import { eq } from 'drizzle-orm';
-import { db } from '../../db';
-import { count } from 'drizzle-orm';
+import { NotFoundException } from '../../errors/notfound.exception';
 import { paginationSchema } from '../../@shared/schemas';
+import { UserService } from './users.service';
 
 export class UserController {
-  async create(req: Request, res: Response, next: NextFunction) {
+  constructor(private readonly userService: UserService) {}
+
+  create = async (req: Request, res: Response, next: NextFunction) => {
     const dto = createUserDTO.parse(req.body);
 
     try {
-      const existingUser = await db.query.usersTable.findFirst({
-        where: eq(usersTable.email, dto.email),
-        columns: { id: true },
+      const user = await this.userService.create({
+        name: dto.name,
+        email: dto.email,
+        password: dto.password,
       });
-
-      if (existingUser) {
-        return res.status(409).json({
-          status: 409,
-          message: 'Email address is already in use',
-        });
-      }
-      const passwordHash = await hash(dto.password, 10);
-
-      const [user] = await db
-        .insert(usersTable)
-        .values({
-          name: dto.name,
-          email: dto.email,
-          passwordHash,
-        })
-        .returning({
-          id: usersTable.id,
-          name: usersTable.name,
-          email: usersTable.email,
-        });
 
       return res.status(201).json({
         status: 201,
@@ -45,66 +25,38 @@ export class UserController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async findAll(req: Request, res: Response, next: NextFunction) {
+  findAll = async (req: Request, res: Response, next: NextFunction) => {
     const { page, limit } = paginationSchema.parse(req.query);
-    const offset = (page - 1) * limit;
 
     try {
-      const [users, [totalData]] = await Promise.all([
-        db.query.usersTable.findMany({
-          limit,
-          offset,
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        }),
-        db.select({ count: count() }).from(usersTable),
-      ]);
-
-      const totalPages = Math.ceil(totalData.count / limit);
-
-      const nextPage = page < totalPages ? page + 1 : null;
-
-      const previousPage = page > 1 ? page - 1 : null;
+      const data = await this.userService.findAll({ page, limit });
 
       return res.status(200).json({
         status: 200,
-        data: users,
+        data: data.users,
         meta: {
-          totalItems: totalData.count,
-          totalPages,
+          totalItems: data.count,
+          totalPages: data.totalPages,
           currentPage: page,
-          previousPage,
-          nextPage,
+          previousPage: data.previousPage,
+          nextPage: data.nextPage,
         },
       });
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async findById(req: Request, res: Response, next: NextFunction) {
+  findById = async (req: Request, res: Response, next: NextFunction) => {
     const dto = userIdParamsDTO.parse(req.params);
 
     try {
-      const user = await db.query.usersTable.findFirst({
-        where: eq(usersTable.id, dto.userId),
-        columns: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      });
+      const user = await this.userService.findById({ userId: dto.userId });
 
       if (!user) {
-        return res.status(404).json({
-          status: 404,
-          message: 'User not found',
-        });
+        throw new NotFoundException('User not found');
       }
 
       return res.status(200).json({
@@ -114,65 +66,43 @@ export class UserController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async update(req: Request, res: Response, next: NextFunction) {
+  update = async (req: Request, res: Response, next: NextFunction) => {
     const { userId } = userIdParamsDTO.parse(req.params);
     const updateDTO = updateUserDTO.parse(req.body);
 
     try {
-      const [updatedUser] = await db
-        .update(usersTable)
-        .set(updateDTO)
-        .where(eq(usersTable.id, userId))
-        .returning({
-          id: usersTable.id,
-          name: usersTable.name,
-          email: usersTable.email,
-        });
+      const user = await this.userService.update(userId, updateDTO);
 
-      if (!updatedUser) {
-        return res.status(404).json({
-          status: 404,
-          message: 'User not found',
-        });
+      if (!user) {
+        throw new NotFoundException('User not found');
       }
 
       return res.status(200).json({
         status: 200,
-        data: updatedUser,
+        data: user,
       });
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async delete(req: Request, res: Response, next: NextFunction) {
-    const dto = userIdParamsDTO.parse(req.params);
+  delete = async (req: Request, res: Response, next: NextFunction) => {
+    const { userId } = userIdParamsDTO.parse(req.params);
 
     try {
-      const [deletedUser] = await db
-        .delete(usersTable)
-        .where(eq(usersTable.id, dto.userId))
-        .returning({
-          id: usersTable.id,
-          name: usersTable.name,
-          email: usersTable.email,
-        });
+      const user = await this.userService.delete(userId);
 
-      if (!deletedUser) {
-        return res.status(404).json({
-          status: 404,
-          message: 'User not found',
-        });
+      if (!user) {
+        throw new NotFoundException('User not found');
       }
-
       return res.status(200).json({
         status: 200,
-        data: deletedUser,
+        data: user,
       });
     } catch (error) {
       next(error);
     }
-  }
+  };
 }
