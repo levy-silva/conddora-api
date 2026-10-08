@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { BaseException } from '../errors/base.exception';
-import { InternalServerException } from '../errors/internal.server.exception';
 
 export const errorHandler = (
   error: unknown,
@@ -22,10 +21,10 @@ export const errorHandler = (
       status: error.status,
       message: error.message,
     });
+  } else if (error instanceof Error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
   }
-  const err = new InternalServerException();
-  return res.status(err.status).json({
-    status: err.status,
-    message: err.message,
-  });
 };
