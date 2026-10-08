@@ -18,7 +18,14 @@ export const errorHandler = (
       })),
     });
   } else if (error instanceof BaseException) {
-    return error.send(res);
+    return res.status(error.status).json({
+      status: error.status,
+      message: error.message,
+    });
   }
-  return new InternalServerException(error).send(res);
+  const err = new InternalServerException();
+  return res.status(err.status).json({
+    status: err.status,
+    message: err.status,
+  });
 };
