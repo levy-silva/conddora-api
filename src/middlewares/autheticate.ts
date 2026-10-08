@@ -28,10 +28,12 @@ export const authenticate = (
     const payload = verify(accesstoken, process.env.JWT_SECRET!) as {
       id: string;
       email: string;
+      role: string;
     };
 
     req.userId = payload.id;
     req.userEmail = payload.email;
+    req.userRole = payload.role;
 
     next();
   } catch (error) {
