@@ -26,6 +26,6 @@ export const errorHandler = (
   const err = new InternalServerException();
   return res.status(err.status).json({
     status: err.status,
-    message: err.status,
+    message: err.message,
   });
 };
