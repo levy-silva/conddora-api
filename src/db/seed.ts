@@ -5,6 +5,7 @@ import { hashSync } from 'bcrypt';
 
 import { db } from '.';
 import { condominiosTable, rolesTable, usersTable } from './schema';
+import { eq } from 'drizzle-orm';
 
 const f = new Faker({
   locale: [pt_BR, en],
@@ -70,14 +71,6 @@ const populate = async () => {
 
     // Database operations only.
     await db.transaction(async (tx) => {
-      await tx.insert(usersTable).values({
-        name: 'Admin',
-        email: 'admin@email.com',
-        passwordHash: adminPasswordHash,
-      });
-
-      console.log('Admin user created successfully');
-
       await tx
         .insert(rolesTable)
         .values([
@@ -87,15 +80,25 @@ const populate = async () => {
           { name: 'FUNCIONARIO' },
         ]);
 
-      console.log('Roles created successfully');
+      const adminRole = await tx.query.rolesTable.findFirst({
+        where: eq(rolesTable.name, 'ADMIN'),
+        columns: { id: true },
+      });
+
+      if (!adminRole) {
+        throw new Error('ADMIN role was not created.');
+      }
+
+      await tx.insert(usersTable).values({
+        name: 'Admin',
+        email: 'admin@email.com',
+        passwordHash: adminPasswordHash,
+        roleId: adminRole?.id,
+      });
 
       await tx.insert(usersTable).values(users);
 
-      console.log('Users created successfully');
-
       await tx.insert(condominiosTable).values(condominios);
-
-      console.log('Condomínios created successfully');
     });
 
     console.log('Database populated successfully');
