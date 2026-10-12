@@ -1,9 +1,9 @@
 import express, { Application } from 'express';
 
-import authRouter from './auth.routes';
-import usersRouter from './users.routes';
 import condominiosRouter from './condominios.routes';
+import usersRouter from './users.routes';
 import rolesRouter from './roles.routes';
+import authRouter from './auth.routes';
 
 export const router = (app: Application): void => {
   app.route('/').get((req, res) =>
@@ -13,6 +13,7 @@ export const router = (app: Application): void => {
   );
 
   app.use(
+    '/api',
     express.json(),
     authRouter,
     usersRouter,
