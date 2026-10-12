@@ -1,6 +1,6 @@
 import { UnauthorizedException } from '../../errors/unauthorized.exception';
 import { usersTable } from '../../db/schema';
-import { sign } from 'jsonwebtoken';
+import { sign, SignOptions } from 'jsonwebtoken';
 import { compare } from 'bcrypt';
 import { eq } from 'drizzle-orm';
 import { db } from '../../db';
@@ -38,7 +38,7 @@ export class AuthService {
 
       const accesstoken = sign(payload, process.env.JWT_SECRET!, {
         subject: user.id,
-        expiresIn: '30m',
+        expiresIn: process.env.JWT_EXPIRES_IN! as SignOptions['expiresIn'],
       });
 
       return { accesstoken };
