@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import { CondominioController } from '../modules/condominios/condominios.controller';
 import { CondominioService } from '../modules/condominios/condominios.service';
 
